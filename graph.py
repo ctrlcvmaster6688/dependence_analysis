@@ -2,8 +2,6 @@ import re
 import networkx as nx
 import matplotlib.pyplot as plt
 
-import re
-
 # 定义正则表达式模式
 config_pattern = re.compile(r'^config (\w+)')
 depends_pattern = re.compile(r'^\s*(depends on|select) (.+)')
@@ -37,7 +35,6 @@ def parse_kconfig(file_path):
     
     return configs, dependencies
 
-
 def build_dependency_graph(configs, dependencies):
     G = nx.DiGraph()
     G.add_nodes_from(configs)
@@ -54,8 +51,14 @@ def find_isolated_configs(G):
     isolated_configs = [node for node in G.nodes if G.in_degree(node) == 0 and G.out_degree(node) == 0]
     return isolated_configs
 
+def output_dependencies(file_path, dependencies):
+    with open(file_path, 'w', encoding='utf-8') as file:
+        for config, deps in dependencies.items():
+            for dep in deps:
+                file.write(f"{dep} -> {config}\n")
+
 def main():
-    kconfig_file = 'linux-6.9.4/linux-6.9.4/all.txt'  
+    kconfig_file = 'all.txt'
     configs, dependencies = parse_kconfig(kconfig_file)
     
     G = build_dependency_graph(configs, dependencies)
@@ -66,6 +69,9 @@ def main():
     with open('isolated_configs.txt', 'w', encoding='utf-8') as output_file:
         for config in isolated_configs:
             output_file.write(config + '\n')
+    
+    # 输出依赖关系到文件
+    output_dependencies('config_dependencies.txt', dependencies)
     
     # 打印并输出统计信息
     total_configs = len(configs)
