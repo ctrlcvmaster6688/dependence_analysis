@@ -21,17 +21,18 @@ def parse_kconfig(file_path):
         if config_match:
             current_config = config_match.group(1)
             configs.add(current_config)
-            dependencies[current_config] = []
+            dependencies[current_config] = {'depends_on': [], 'selects': []}
         elif current_config:
             depends_match = depends_pattern.match(line)
             if depends_match:
                 depends_type = depends_match.group(1).strip()
                 depends_on = depends_match.group(2).split()
-                if depends_type == 'depends on' or depends_type == 'select':
-                    for dep in depends_on:
-                        if dep in ['&&', '||', '!']:
-                            continue
-                        dependencies[current_config].append(dep.strip('()'))
+                for dep in depends_on:
+                    if dep not in ['&&', '||', '!']:
+                        if depends_type == 'depends on':
+                            dependencies[current_config]['depends_on'].append(dep)
+                        elif depends_type == 'select':
+                            dependencies[current_config]['selects'].append(dep)
     
     return configs, dependencies
 
@@ -40,9 +41,12 @@ def build_dependency_graph(configs, dependencies):
     G.add_nodes_from(configs)
     
     for config, deps in dependencies.items():
-        for dep in deps:
+        for dep in deps['depends_on']:
             if dep in configs: 
                 G.add_edge(dep, config)
+        for select in deps['selects']:
+            if select in configs:
+                G.add_edge(select, config)
     
     return G
 
@@ -54,8 +58,10 @@ def find_isolated_configs(G):
 def output_dependencies(file_path, dependencies):
     with open(file_path, 'w', encoding='utf-8') as file:
         for config, deps in dependencies.items():
-            for dep in deps:
+            for dep in deps['depends_on']:
                 file.write(f"{dep} -> {config}\n")
+            for select in deps['selects']:
+                file.write(f"{config} -> {select}\n")
 
 def main():
     kconfig_file = 'all.txt'
@@ -76,15 +82,15 @@ def main():
     # 打印并输出统计信息
     total_configs = len(configs)
     isolated_configs_count = len(isolated_configs)
-    with_depends_on = sum(1 for deps in dependencies.values() if deps)
+    with_depends_on = sum(1 for deps in dependencies.values() if deps['depends_on'] or deps['selects'])
     
     print(f"总的 config 数量: {total_configs}")
-    print(f"带有依赖关系的 config 数量: {with_depends_on}")
+    print(f"带有 depends on 或 select 关系的 config 数量: {with_depends_on}")
     print(f"孤立的 config 数量: {isolated_configs_count}")
     
     with open('config_statistics.txt', 'w', encoding='utf-8') as stats_file:
         stats_file.write(f"总的 config 数量: {total_configs}\n")
-        stats_file.write(f"带有依赖关系的 config 数量: {with_depends_on}\n")
+        stats_file.write(f"带有 depends on 或 select 关系的 config 数量: {with_depends_on}\n")
         stats_file.write(f"孤立的 config 数量: {isolated_configs_count}\n")
 
     # 绘制有向图
