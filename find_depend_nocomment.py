@@ -10,7 +10,7 @@ def find_common_configs(file1, file2, output_file):
     undescribed_configs = read_config_file(file2)
     
     # 找到两个集合的交集，即共同的 config 选项
-    common_configs = isolated_configs.intersection(undescribed_configs)
+    common_configs = isolated_configs.difference(undescribed_configs)
     
     # 将共同的 config 选项写入新的文件
     with open(output_file, 'w', encoding='utf-8') as file:
@@ -18,9 +18,9 @@ def find_common_configs(file1, file2, output_file):
             file.write(config + '\n')
 
 def main():
-    file1 = 'isolated_configs.txt'
-    file2 = 'no_special_configs.txt'
-    output_file = 'common_configs.txt'
+    file1 = 'no_special_configs.txt'
+    file2 = 'isolated_configs.txt'
+    output_file = 'depend_but_nocomment.txt'
     
     find_common_configs(file1, file2, output_file)
     print(f"共同的 config 选项已写入到 {output_file}")
